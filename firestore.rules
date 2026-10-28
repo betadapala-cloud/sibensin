@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isValidBbmDatabase(data) {
+      return data.version is string && data.version.size() <= 32 &&
+             data.lastSaved is string && data.lastSaved.size() <= 64;
+    }
+
+    // Central BBM Database collection accessible to all users
+    match /bbm_database/{docId} {
+      // Allow any user (public) to read the database so other users can immediately access it
+      allow get: if isValidId(docId);
+      allow list: if true;
+
+      // Allow saving/updating the shared database with valid structure
+      allow create, update: if isValidId(docId) && isValidBbmDatabase(incoming());
+      allow delete: if false;
+    }
+  }
+}

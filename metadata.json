@@ -1,0 +1,8 @@
+{
+  "name": "SiBensin - Rekapitulasi Penggunaan BBM Sekretariat",
+  "description": "Aplikasi visualisasi data dan laporan rekapitulasi penggunaan BBM Sekretariat dengan fitur simpan data, proteksi kata sandi, dan ekspor impor database.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
