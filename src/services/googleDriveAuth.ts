@@ -9,19 +9,32 @@ import {
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-// Reuse existing app instance if already initialized
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+// Safe app and auth initialization
+let app: any = null;
+let authInstance: any = null;
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  authInstance = getAuth(app);
+} catch (e) {
+  console.warn('Firebase Auth initialization warning:', e);
+}
+export const auth = authInstance;
 
 export const TARGET_EMAIL = 'dpkpkabpas@gmail.com';
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-const provider = new GoogleAuthProvider();
-provider.addScope(DRIVE_SCOPE);
-provider.setCustomParameters({
-  login_hint: TARGET_EMAIL,
-  prompt: 'select_account',
-});
+let providerInstance: GoogleAuthProvider | null = null;
+try {
+  providerInstance = new GoogleAuthProvider();
+  providerInstance.addScope(DRIVE_SCOPE);
+  providerInstance.setCustomParameters({
+    login_hint: TARGET_EMAIL,
+    prompt: 'select_account',
+  });
+} catch (e) {
+  console.warn('GoogleAuthProvider initialization warning:', e);
+}
+const provider = providerInstance;
 
 // Flag to indicate if we are in the middle of a sign-in flow
 let isSigningIn = false;
@@ -36,6 +49,10 @@ export const initAuth = (
   onAuthSuccess?: (user: User, token: string | null) => void,
   onSignedOut?: () => void
 ) => {
+  if (!auth) {
+    if (onSignedOut) onSignedOut();
+    return () => {};
+  }
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
       if (onAuthSuccess) {
@@ -51,6 +68,9 @@ export const initAuth = (
 };
 
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+  if (!auth || !provider) {
+    throw new Error('Layanan otentikasi Google belum siap.');
+  }
   try {
     isSigningIn = true;
     const result = await signInWithPopup(auth, provider);

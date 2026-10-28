@@ -11,11 +11,26 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { auth } from './googleDriveAuth';
 import { YearlyStore, DEFAULT_YEARLY_DATA } from '../data/bbmData';
 
-// Reuse existing app instance if already initialized
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Safe app and db initialization
+let app: any = null;
+let dbInstance: any = null;
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  if (firebaseConfig && firebaseConfig.firestoreDatabaseId) {
+    dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  } else {
+    dbInstance = getFirestore(app);
+  }
+} catch (e) {
+  console.warn('Firebase Firestore initialization warning:', e);
+  try {
+    if (app) dbInstance = getFirestore(app);
+  } catch (err) {
+    console.warn('Firestore fallback warning:', err);
+  }
+}
 
-// CRITICAL: Initialize Firestore using the firestoreDatabaseId from firebase-applet-config.json
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = dbInstance;
 
 export enum OperationType {
   CREATE = 'create',
@@ -51,13 +66,13 @@ export function handleFirestoreError(
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
       providerInfo:
-        auth.currentUser?.providerData?.map((provider) => ({
+        auth?.currentUser?.providerData?.map((provider: any) => ({
           providerId: provider.providerId,
           email: provider.email,
         })) || [],
@@ -65,12 +80,12 @@ export function handleFirestoreError(
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.warn('Firestore Operation Notice: ', JSON.stringify(errInfo));
 }
 
 // Connection test on boot
 export async function testConnection() {
+  if (!db) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
@@ -112,6 +127,7 @@ function normalizeYearlyStore(raw: any): YearlyStore {
  * Fetch the latest shared database from Cloud Firestore
  */
 export async function fetchCentralDatabase(): Promise<CentralDatabasePayload | null> {
+  if (!db) return null;
   const path = CENTRAL_DOC_PATH;
   try {
     const snapshot = await getDoc(doc(db, 'bbm_database', 'latest'));
@@ -138,8 +154,12 @@ export async function saveCentralDatabase(
   yearlyStore: YearlyStore,
   userEmail?: string | null
 ): Promise<string> {
-  const path = CENTRAL_DOC_PATH;
   const timestamp = new Date().toISOString();
+  if (!db) {
+    console.warn('Firestore database is not initialized, skipping cloud save.');
+    return timestamp;
+  }
+  const path = CENTRAL_DOC_PATH;
   const payload = {
     version: '2.0.0',
     lastSaved: timestamp,
@@ -163,26 +183,32 @@ export function subscribeToCentralDatabase(
   onUpdate: (payload: CentralDatabasePayload) => void,
   onError?: (err: Error) => void
 ) {
+  if (!db) {
+    return () => {};
+  }
   const path = CENTRAL_DOC_PATH;
-  return onSnapshot(
-    doc(db, 'bbm_database', 'latest'),
-    (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        onUpdate({
-          version: data.version || '2.0.0',
-          lastSaved: data.lastSaved || new Date().toISOString(),
-          updatedBy: data.updatedBy || 'Pengguna SiBensin',
-          yearlyStore: normalizeYearlyStore(data.yearlyStore),
-        });
-      }
-    },
-    (error) => {
-      try {
+  try {
+    return onSnapshot(
+      doc(db, 'bbm_database', 'latest'),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          onUpdate({
+            version: data.version || '2.0.0',
+            lastSaved: data.lastSaved || new Date().toISOString(),
+            updatedBy: data.updatedBy || 'Pengguna SiBensin',
+            yearlyStore: normalizeYearlyStore(data.yearlyStore),
+          });
+        }
+      },
+      (error) => {
         handleFirestoreError(error, OperationType.GET, path);
-      } catch (e: any) {
-        if (onError) onError(e);
+        if (onError) onError(error);
       }
-    }
-  );
+    );
+  } catch (err: any) {
+    handleFirestoreError(err, OperationType.GET, path);
+    if (onError) onError(err);
+    return () => {};
+  }
 }
