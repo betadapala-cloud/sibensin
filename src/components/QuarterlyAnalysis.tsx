@@ -41,7 +41,7 @@ export const QuarterlyAnalysis: React.FC<QuarterlyAnalysisProps> = ({
           <div className="flex items-center gap-2">
             <LineChart className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-              Analisis Perkembangan per Triwulan {year} (4 Triwulan)
+              Analisis Perkembangan per Triwulan {year}
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -86,7 +86,7 @@ export const QuarterlyAnalysis: React.FC<QuarterlyAnalysisProps> = ({
                     Triwulan {roman}
                   </span>
                   <span className="font-mono tabular-nums text-slate-600 font-medium">
-                    {q.percentage.toFixed(1)}% dari Total
+                    {q.percentage.toFixed(1)}% prosentase dari total
                   </span>
                 </div>
                 <div className="text-xl font-bold font-mono tabular-nums text-slate-900 tracking-tight">

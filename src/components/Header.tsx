@@ -158,7 +158,8 @@ export const Header: React.FC<HeaderProps> = ({
             title="Buka Pengaturan Database & Cadangan"
           >
             <Settings className="w-3.5 h-3.5 text-slate-600" />
-            <span className="hidden sm:inline">Pengaturan</span>
+            <span className="hidden md:inline">Pengaturan</span>
+            <span className="md:hidden">Atur</span>
           </button>
 
           {/* Quick Print */}

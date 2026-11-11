@@ -54,7 +54,6 @@ import {
   Cloud,
   Loader2,
   Layers,
-  Globe2,
   UserCheck,
   Shield,
 } from 'lucide-react';
@@ -648,30 +647,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Akses Database Strip - Simplified to ONE button: Pengaturan */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 text-xs shadow-2xs">
-            <div className="flex items-center gap-2 text-slate-700">
-              <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                <Globe2 className="w-3.5 h-3.5 text-emerald-600" />
-                Akses Database:
-              </span>
-              <span className="text-slate-500 text-[11px]">
-                {isUnlocked
-                  ? `Sesi aktif: User ${activeAccount?.username} (${activeAccount?.name}). Siap mengelola dan memperbarui data.`
-                  : 'Mode Baca Aktif. Masuk dengan user admin untuk mengedit & menyimpan.'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setIsSettingsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 rounded-lg shadow-2xs transition-all cursor-pointer"
-                title="Buka Pengaturan Database & Cadangan"
-              >
-                <Settings className="w-3.5 h-3.5 text-slate-600" />
-                <span>Pengaturan</span>
-              </button>
-            </div>
-          </div>
 
           {/* Year Switcher Buttons: Tahun 2026, 2027, 2028, 2029, 2030 */}
           <YearSelector
