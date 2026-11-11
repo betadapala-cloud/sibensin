@@ -31,26 +31,26 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
   const maxMonthVal = Math.max(...monthlySums, 45000000);
   const ceilMax = Math.ceil(maxMonthVal / 10000000) * 10000000;
 
-  // SVG Bar Chart Dimensions
-  const svgWidth = 840;
-  const svgHeight = 220;
-  const chartPadLeft = 75;
+  // SVG Bar Chart Dimensions - refined for optimal legibility and aesthetics
+  const svgWidth = 860;
+  const svgHeight = 230;
+  const chartPadLeft = 78;
   const chartPadRight = 20;
-  const chartPadTop = 32;
-  const chartPadBottom = 38;
+  const chartPadTop = 38;
+  const chartPadBottom = 34;
   const plotWidth = svgWidth - chartPadLeft - chartPadRight;
   const plotHeight = svgHeight - chartPadTop - chartPadBottom;
   const slotWidth = plotWidth / 12;
-  const barWidth = slotWidth * 0.58;
+  const barWidth = slotWidth * 0.56;
 
   // Donut Chart Geometry
-  const donutSize = 180;
+  const donutSize = 190;
   const donutCenter = donutSize / 2;
-  const donutRadius = 72;
-  const donutHole = 42;
+  const donutRadius = 78;
+  const donutHole = 46;
 
   // Compute donut slices
-  let cumulativeAngle = -90; // Start at top
+  let cumulativeAngle = -90; // Start at top (12 o'clock)
   const donutSlices = data.map((item, idx) => {
     const total = rowTotals[idx]?.total || 0;
     const pct = grandTotal > 0 ? (total / grandTotal) * 100 : 0;
@@ -104,7 +104,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
       {/* ============================================================ */}
       <div className="print-page-1">
         {/* Kop Surat / Document Header */}
-        <div className="text-center pb-4 border-b-2 border-slate-900 mb-6">
+        <div className="text-center pb-4 border-b-2 border-slate-900 mb-5">
           <h3 className="text-xs font-semibold tracking-wider uppercase text-slate-600">
             PEMERINTAH DAERAH
           </h3>
@@ -119,8 +119,8 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           </p>
         </div>
 
-        {/* KPI Summary Strip - Dynamic Highest Realization */}
-        <div className="grid grid-cols-5 gap-3 mb-6 bg-slate-50 p-3 rounded border border-slate-200">
+        {/* KPI Summary Strip */}
+        <div className="grid grid-cols-5 gap-3 mb-5 bg-slate-50 p-3 rounded-lg border border-slate-200">
           <div>
             <span className="text-[9px] uppercase font-bold text-slate-500 block">
               Jumlah Anggaran
@@ -179,7 +179,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
         </div>
 
         {/* Official Table */}
-        <div className="mb-6">
+        <div className="mb-5">
           <div className="font-bold text-xs text-slate-900 mb-2 uppercase flex items-center justify-between">
             <span>Tabel Rekapitulasi Penggunaan BBM Tahun {year}</span>
             <span className="text-[10px] text-slate-500 font-normal">Satuan: Rupiah (Rp)</span>
@@ -251,23 +251,46 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
           </table>
         </div>
 
-        {/* Ringkasan Realisasi Triwulan */}
-        <div className="mb-6 p-2.5 bg-slate-50 border border-slate-200 rounded flex items-center justify-between text-[10px]">
-          <span className="font-bold text-slate-800 uppercase">
-            Ringkasan Serapan Triwulan:
-          </span>
-          <div className="flex items-center gap-4 text-slate-700">
-            {quarters.slice(0, 3).map((q) => (
-              <span key={q.name}>
-                <strong>{q.name}:</strong>{' '}
-                <span className="font-mono">{formatRupiah(q.total)}</span> ({q.percentage.toFixed(1)}%)
-              </span>
-            ))}
+        {/* Ringkasan Realisasi 4 Triwulan Lengkap (Triwulan I s.d. IV) */}
+        <div className="mb-5 p-3 bg-slate-50 border border-slate-200 rounded-lg text-[10px]">
+          <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200">
+            <span className="font-bold text-slate-900 uppercase tracking-wide">
+              Ringkasan Perkembangan Serapan 4 Triwulan (TA {year}):
+            </span>
+            <span className="font-mono text-slate-600 font-semibold text-[9px]">
+              Total Serapan: {formatRupiah(grandTotal)}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-2.5">
+            {quarters.map((q, qIdx) => {
+              const label = [
+                'Triwulan I (Jan - Mar)',
+                'Triwulan II (Apr - Jun)',
+                'Triwulan III (Jul - Sep)',
+                'Triwulan IV (Okt - Des)',
+              ][qIdx];
+              return (
+                <div
+                  key={q.name}
+                  className="bg-white p-2 rounded border border-slate-200 flex flex-col justify-between"
+                >
+                  <span className="font-bold text-slate-700 text-[9px] uppercase">
+                    {label}
+                  </span>
+                  <span className="font-mono font-bold text-slate-900 text-[11px] my-0.5">
+                    {formatRupiah(q.total)}
+                  </span>
+                  <span className="text-slate-500 text-[8px] font-mono">
+                    {q.percentage.toFixed(1)}% dari Total
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Signature Section on Page 1 */}
-        <div className="flex justify-between items-end pt-4 pb-2 border-t border-slate-200">
+        <div className="flex justify-between items-end pt-3 pb-2 border-t border-slate-200">
           <div className="text-[9px] text-slate-400">
             <p>Dokumen Resmi SiBensin • Dicetak pada: {new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
             <p>Halaman 1 {options.includeCharts || options.includeAnalysis ? 'dari 2' : ''}</p>
@@ -297,7 +320,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
       {(options.includeCharts || options.includeAnalysis) && (
         <div className="print-break-before mt-8 pt-6 border-t-2 border-slate-900">
           {/* Header Lampiran */}
-          <div className="text-center pb-3 border-b border-slate-300 mb-5">
+          <div className="text-center pb-3 border-b border-slate-300 mb-4">
             <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               LAMPIRAN DOKUMEN LAPORAN RESMI
             </h4>
@@ -309,14 +332,14 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
             </p>
           </div>
 
-          {/* Visual Charts Display */}
+          {/* Visual Charts Display - Refined Layout & Aesthetics */}
           {options.includeCharts && (
-            <div className="space-y-5 mb-6">
+            <div className="space-y-4 mb-5">
               {/* 1. DIAGRAM BATANG BULANAN */}
-              <div className="border border-slate-300 rounded-lg p-4 bg-white">
-                <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+              <div className="border border-slate-300 rounded-lg p-4 bg-white shadow-2xs">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
                   <div>
-                    <h3 className="font-bold text-xs text-blue-900 uppercase">
+                    <h3 className="font-bold text-xs text-blue-900 uppercase tracking-tight">
                       1. Diagram Batang: Tren Realisasi Bulanan (Tahun {year})
                     </h3>
                     <p className="text-[10px] text-slate-500">
@@ -328,25 +351,25 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                     {data.map((item) => (
                       <div key={item.id} className="flex items-center gap-1.5">
                         <span
-                          className="w-3 h-3 rounded-sm inline-block"
+                          className="w-3 h-3 rounded-xs inline-block"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="font-semibold text-slate-700">{item.name}</span>
                       </div>
                     ))}
                     {highestMonth && highestMonth.total !== null && (
-                      <div className="flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-300 px-2 py-0.5 rounded text-[9px] font-bold">
+                      <div className="flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded text-[9px] font-bold">
                         <span>★ Puncak: {highestMonth.monthName} ({formatRupiah(highestMonth.total)})</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Vector SVG Bar Chart */}
+                {/* Vector SVG Bar Chart - Clean, Polished, Well-spaced */}
                 <div className="w-full flex justify-center overflow-hidden">
                   <svg
                     viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                    className="w-full max-h-[220px]"
+                    className="w-full max-h-[230px]"
                     style={{ fontFeatureSettings: '"tnum"' }}
                   >
                     {/* Y Axis Gridlines and Labels */}
@@ -360,7 +383,8 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                             y1={yPos}
                             x2={chartPadLeft + plotWidth}
                             y2={yPos}
-                            stroke={i === 0 ? '#64748b' : '#f1f5f9'}
+                            stroke={i === 0 ? '#94a3b8' : '#f1f5f9'}
+                            strokeDasharray={i === 0 ? 'none' : '3 3'}
                             strokeWidth={i === 0 ? '1.5' : '1'}
                           />
                           <text
@@ -407,13 +431,15 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                                 width={barWidth}
                                 height={segmentH}
                                 fill={row.color}
+                                rx="1.5"
                               />
                             );
                           })}
 
-                          {/* Highlight outline & Peak Badge if highest month */}
+                          {/* Value on Top of Bar or Peak Indicator */}
                           {isPeak ? (
                             <g>
+                              {/* Highlight Outline */}
                               <rect
                                 x={xPos - 1}
                                 y={chartPadTop + plotHeight - (stackSum / ceilMax) * plotHeight - 1}
@@ -421,13 +447,15 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                                 height={(stackSum / ceilMax) * plotHeight + 2}
                                 fill="none"
                                 stroke="#f59e0b"
-                                strokeWidth="2.5"
+                                strokeWidth="2"
+                                rx="2"
                               />
+                              {/* Floating Peak Label */}
                               <rect
-                                x={xPos - 12}
-                                y={chartPadTop + plotHeight - (stackSum / ceilMax) * plotHeight - 22}
-                                width={barWidth + 24}
-                                height="16"
+                                x={xPos + barWidth / 2 - 24}
+                                y={chartPadTop + plotHeight - (stackSum / ceilMax) * plotHeight - 20}
+                                width="48"
+                                height="15"
                                 rx="3"
                                 fill="#fef3c7"
                                 stroke="#d97706"
@@ -435,9 +463,9 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                               />
                               <text
                                 x={xPos + barWidth / 2}
-                                y={chartPadTop + plotHeight - (stackSum / ceilMax) * plotHeight - 11}
+                                y={chartPadTop + plotHeight - (stackSum / ceilMax) * plotHeight - 9.5}
                                 textAnchor="middle"
-                                fontSize="8"
+                                fontSize="7.5"
                                 fontWeight="bold"
                                 fill="#92400e"
                               >
@@ -461,7 +489,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                           {/* Month Label on X Axis */}
                           <text
                             x={xPos + barWidth / 2}
-                            y={chartPadTop + plotHeight + 15}
+                            y={chartPadTop + plotHeight + 14}
                             textAnchor="middle"
                             fontSize="9"
                             fontWeight={isPeak ? 'bold' : 'normal'}
@@ -476,8 +504,8 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                 </div>
               </div>
 
-              {/* 2. DIAGRAM LINGKARAN & PROPORSI BAHAN BAKAR */}
-              <div className="grid grid-cols-12 gap-4 border border-slate-300 rounded-lg p-4 bg-white">
+              {/* 2. DIAGRAM LINGKARAN & PROPORSI BAHAN BAKAR BESERTA 4 TRIWULAN */}
+              <div className="grid grid-cols-12 gap-4 border border-slate-300 rounded-lg p-4 bg-white shadow-2xs">
                 {/* Donut Chart Visual */}
                 <div className="col-span-5 flex flex-col items-center justify-center p-2 border-r border-slate-200">
                   <h4 className="font-bold text-xs text-amber-900 uppercase mb-2">
@@ -495,14 +523,14 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                           d={slice.pathData}
                           fill={slice.color}
                           stroke="#ffffff"
-                          strokeWidth="2"
+                          strokeWidth="2.5"
                         />
                       ))}
                     </svg>
                     {/* Centered Donut label */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                       <span className="text-[8px] uppercase font-bold text-slate-400">
-                        TOTAL REALISASI
+                        TOTAL SERAPAN
                       </span>
                       <span className="text-xs font-bold font-mono text-slate-900">
                         {formatRupiahCompact(grandTotal)}
@@ -512,7 +540,7 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                   </div>
                 </div>
 
-                {/* Composition Breakdown & Quarterly Details */}
+                {/* Composition Breakdown & 4 Quarters Detail */}
                 <div className="col-span-7 flex flex-col justify-between py-1">
                   <div>
                     <h5 className="font-bold text-[11px] text-slate-900 mb-2 uppercase">
@@ -544,23 +572,26 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Quarterly breakdown inside chart card */}
+                  {/* 4 Quarters breakdown inside chart card */}
                   <div className="pt-2 border-t border-slate-200">
                     <span className="text-[10px] font-bold text-slate-700 block mb-1.5 uppercase">
-                      Realisasi Kumulatif per Triwulan:
+                      Realisasi Kumulatif per Triwulan (4 Triwulan):
                     </span>
-                    <div className="grid grid-cols-3 gap-2 text-[9px]">
-                      {quarters.slice(0, 3).map((q) => (
-                        <div key={q.name} className="p-1.5 rounded bg-blue-50/60 border border-blue-100">
-                          <span className="font-semibold text-slate-700 block truncate">{q.name}</span>
-                          <span className="font-mono font-bold text-blue-900 block mt-0.5">
-                            {formatRupiah(q.total)}
-                          </span>
-                          <span className="text-slate-500 text-[8px] block">
-                            {q.percentage.toFixed(1)}% serapan
-                          </span>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-4 gap-2 text-[9px]">
+                      {quarters.map((q, qIdx) => {
+                        const roman = ['TW I', 'TW II', 'TW III', 'TW IV'][qIdx];
+                        return (
+                          <div key={q.name} className="p-1.5 rounded bg-blue-50/60 border border-blue-100 flex flex-col justify-between">
+                            <span className="font-bold text-blue-950 block">{roman}</span>
+                            <span className="font-mono font-bold text-blue-900 block mt-0.5 text-[10px]">
+                              {formatRupiah(q.total)}
+                            </span>
+                            <span className="text-slate-500 text-[8px] block">
+                              {q.percentage.toFixed(1)}% serapan
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -568,40 +599,38 @@ export const PrintReportView: React.FC<PrintReportViewProps> = ({
             </div>
           )}
 
-          {/* Analytical notes (if included) - DYNAMIC HIGHEST REALIZATION */}
+          {/* Analytical notes (if included) */}
           {options.includeAnalysis && (
-            <div className="p-3.5 bg-slate-50 border border-slate-300 rounded text-[10px] leading-relaxed mb-6">
+            <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-lg text-[10px] leading-relaxed mb-5 shadow-2xs">
               <div className="font-bold text-slate-900 mb-1.5 uppercase flex items-center justify-between">
                 <span>Catatan Evaluasi dan Analisis Operasional Tahun {year}:</span>
-                <span className="text-slate-500 font-normal">Kajian Realisasi Anggaran</span>
+                <span className="text-slate-500 font-normal">Kajian Realisasi Anggaran 4 Triwulan</span>
               </div>
               <ol className="list-decimal list-inside space-y-1 text-slate-700">
                 <li>
                   Total serapan anggaran bahan bakar operasional periode {year} mencapai{' '}
                   <strong className="font-mono text-slate-900">{formatRupiah(grandTotal)}</strong> dari pagu anggaran{' '}
-                  <strong className="font-mono text-slate-900">{formatRupiah(totalBudget)}</strong>, menyisakan sisa realisasi sebesar{' '}
+                  <strong className="font-mono text-slate-900">{formatRupiah(totalBudget)}</strong>, menyisakan saldo realisasi sebesar{' '}
                   <strong className="font-mono text-emerald-800">{formatRupiah(sisaRealisasi)}</strong> dengan rerata bulanan{' '}
-                  <strong className="font-mono text-slate-900">{formatRupiah(Math.round(average1Tahun))}</strong> (total 1 tahun).
+                  <strong className="font-mono text-slate-900">{formatRupiah(Math.round(average1Tahun))}</strong>.
                 </li>
                 <li>
                   Bahan bakar <strong>Pertamax</strong> menyerap porsi terbesar sebesar{' '}
-                  <strong className="font-mono">{formatRupiah(rowTotals[0]?.total || 0)}</strong> dengan tingkat konsumsi bulanan yang relatif stabil untuk operasional kendaraan dinas.
+                  <strong className="font-mono">{formatRupiah(rowTotals[0]?.total || 0)}</strong> dengan tingkat konsumsi bulanan yang relatif stabil untuk operasional kendaraan dinas pimpinan dan dinas harian.
                 </li>
                 <li>
-                  Pos <strong>Dex Kadin</strong> membukukan realisasi{' '}
-                  <strong className="font-mono">{formatRupiah(rowTotals[1]?.total || 0)}</strong> dan pos{' '}
-                  <strong>Dex Toilet</strong> membukukan{' '}
-                  <strong className="font-mono">{formatRupiah(rowTotals[2]?.total || 0)}</strong> untuk operasional armada dinas luar.
+                  Pos <strong>Dex Kadin</strong> ({formatRupiah(rowTotals[1]?.total || 0)}) dan pos{' '}
+                  <strong>Dex Toilet</strong> ({formatRupiah(rowTotals[2]?.total || 0)}) mendukung mobilitas armada operasional lapangan dan penugasan kedinasan luar.
                 </li>
                 <li>
                   {highestMonth && highestMonth.total !== null ? (
                     <>
                       Puncak realisasi tertinggi tahun {year} tercatat pada bulan{' '}
                       <strong className="text-amber-900">{highestMonth.monthName}</strong> yang mencapai{' '}
-                      <strong className="font-mono text-amber-900">{formatRupiah(highestMonth.total)}</strong>, dipicu oleh penambahan mobilitas dan eskalasi armada operasional lapangan.
+                      <strong className="font-mono text-amber-900">{formatRupiah(highestMonth.total)}</strong>, dipicu oleh eskalasi kegiatan dinas dan penugasan luar.
                     </>
                   ) : (
-                    <>Pola serapan bulanan berjalan stabil dan proporsional sesuai rencana penarikan dana.</>
+                    <>Pola serapan bulanan berjalan stabil dan proporsional sepanjang 4 triwulan tahun anggaran {year}.</>
                   )}
                 </li>
               </ol>

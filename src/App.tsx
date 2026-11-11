@@ -14,14 +14,11 @@ import {
 import {
   initAuth,
   getAccessToken,
-  googleSignIn,
   auth,
 } from './services/googleDriveAuth';
 import {
   findDatabaseInDrive,
-  downloadDatabaseFromDrive,
   uploadDatabaseToDrive,
-  DATABASE_FILENAME,
 } from './services/googleDriveService';
 import {
   testConnection,
@@ -44,8 +41,7 @@ import { QuarterlyAnalysis } from './components/QuarterlyAnalysis';
 import { PdfExportModal } from './components/PdfExportModal';
 import { PrintReportView } from './components/PrintReportView';
 import { PasswordModal } from './components/PasswordModal';
-import { DatabaseModal } from './components/DatabaseModal';
-import { GoogleDriveSyncModal } from './components/GoogleDriveSyncModal';
+import { SettingsModal } from './components/SettingsModal';
 import { PdfExportOptions } from './utils/pdfGenerator';
 import {
   ShieldCheck,
@@ -54,14 +50,11 @@ import {
   CheckCircle2,
   Lock,
   Unlock,
-  Database,
-  RotateCcw,
+  Settings,
   Cloud,
   Loader2,
   Layers,
   Globe2,
-  Users,
-  RefreshCw,
   UserCheck,
   Shield,
 } from 'lucide-react';
@@ -96,18 +89,16 @@ export default function App() {
   });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState<boolean>(false);
 
+  // Unified Settings Modal State (Replaces separate DB & Drive modals)
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+
   // Google Drive Sync State (Personal / Offsite Backup)
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isDriveModalOpen, setIsDriveModalOpen] = useState<boolean>(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(() => {
     return localStorage.getItem(STORAGE_AUTOSYNC_KEY) !== 'false';
   });
   const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
-  const [isImportingFromDrive, setIsImportingFromDrive] = useState<boolean>(false);
   const [lastDriveSyncTime, setLastDriveSyncTime] = useState<string | null>(null);
-
-  // Database Import/Export Modal State
-  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState<boolean>(false);
 
   // PDF Export Modal State
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
@@ -247,27 +238,6 @@ export default function App() {
     [autoSyncEnabled]
   );
 
-  // Manual explicit pull from Cloud Firestore
-  const handleManualRefreshCentral = async () => {
-    setIsLoadingCentralDb(true);
-    try {
-      const payload = await fetchCentralDatabase();
-      if (payload) {
-        setYearlyStore(payload.yearlyStore);
-        saveStoredYearlyData(payload.yearlyStore);
-        setLastSavedTime(payload.lastSaved);
-        setLastUpdatedBy(payload.updatedBy);
-        triggerToast('✅ Database pusat terbaru dari cloud berhasil dimuat ulang!');
-      } else {
-        triggerToast('Database pusat belum memiliki catatan tersimpan.');
-      }
-    } catch (e: any) {
-      triggerToast('Gagal memuat ulang database pusat: ' + (e.message || 'Kesalahan jaringan'));
-    } finally {
-      setIsLoadingCentralDb(false);
-    }
-  };
-
   // Active year dataset & budget
   const currentYearObj = yearlyStore[selectedYear] || DEFAULT_YEARLY_DATA[2026];
   const data = currentYearObj.data;
@@ -297,10 +267,10 @@ export default function App() {
     }));
   };
 
-  // Update Data (Guarded by Developer Account Lock)
+  // Update Data (Guarded by Admin Account Lock)
   const handleUpdateData = async (newData: BbmItemRow[]) => {
     if (!isUnlocked) {
-      triggerToast('🔒 Database terkunci. Buka kunci dengan akun pengembang untuk mengedit data.');
+      triggerToast('🔒 Database terkunci. Buka kunci dengan user admin untuk mengedit data.');
       setIsPasswordModalOpen(true);
       return;
     }
@@ -317,7 +287,7 @@ export default function App() {
 
     const userLabel = activeAccount
       ? `${activeAccount.name} (${activeAccount.username})`
-      : 'Administrator DPKP';
+      : 'admin (Administrator)';
 
     try {
       const ts = await saveCentralDatabase(updated, userLabel);
@@ -333,7 +303,7 @@ export default function App() {
 
   const handleUpdateBudget = async (newBudget: number) => {
     if (!isUnlocked) {
-      triggerToast('🔒 Database terkunci. Buka kunci dengan akun pengembang untuk mengubah pagu anggaran.');
+      triggerToast('🔒 Database terkunci. Buka kunci dengan user admin untuk mengubah pagu anggaran.');
       setIsPasswordModalOpen(true);
       return;
     }
@@ -350,7 +320,7 @@ export default function App() {
 
     const userLabel = activeAccount
       ? `${activeAccount.name} (${activeAccount.username})`
-      : 'Administrator DPKP';
+      : 'admin (Administrator)';
 
     try {
       const ts = await saveCentralDatabase(updated, userLabel);
@@ -367,7 +337,7 @@ export default function App() {
   // Manual explicit save action to Central Cloud Firestore + Local + Drive (Guarded by Account Lock)
   const handleManualSave = useCallback(async () => {
     if (!isUnlocked) {
-      triggerToast('🔒 Database Cloud Firestore terkunci. Silakan masuk dengan akun yang telah ditetapkan oleh pengembang untuk menyimpan perubahan.');
+      triggerToast('🔒 Database Cloud Firestore terkunci. Silakan masuk dengan user admin untuk menyimpan perubahan.');
       setIsPasswordModalOpen(true);
       return;
     }
@@ -376,7 +346,7 @@ export default function App() {
     const currentStore = yearlyStoreRef.current;
     const accountLabel = activeAccount
       ? `${activeAccount.name} (${activeAccount.username})`
-      : 'Administrator DPKP';
+      : 'admin (Administrator)';
 
     // 1. Save to local browser memory
     const ts = saveStoredYearlyData(currentStore);
@@ -398,7 +368,7 @@ export default function App() {
     }
 
     // 3. If connected to Google Drive, also backup offsite
-    let token = await getAccessToken();
+    const token = await getAccessToken();
     if (token) {
       setIsSyncingDrive(true);
       try {
@@ -418,19 +388,9 @@ export default function App() {
     }
   }, [isUnlocked, activeAccount, triggerToast]);
 
-  // Restore/reload last saved from local storage
-  const handleReloadSavedData = () => {
-    const { data: loadedData, lastSaved } = getStoredYearlyData();
-    if (loadedData) {
-      setYearlyStore(loadedData);
-      setLastSavedTime(lastSaved);
-      triggerToast('Data simpanan lokal terakhir berhasil dimuat ulang.');
-    }
-  };
-
   const handleResetCurrentYearData = async () => {
     if (!isUnlocked) {
-      triggerToast('🔒 Database terkunci. Buka kunci dengan akun pengembang untuk mereset data.');
+      triggerToast('🔒 Database terkunci. Buka kunci dengan user admin untuk mereset data.');
       setIsPasswordModalOpen(true);
       return;
     }
@@ -447,7 +407,7 @@ export default function App() {
 
     const userLabel = activeAccount
       ? `${activeAccount.name} (${activeAccount.username})`
-      : 'Administrator DPKP';
+      : 'admin (Administrator)';
 
     try {
       const ts = await saveCentralDatabase(updated, userLabel);
@@ -482,7 +442,7 @@ export default function App() {
   // Database Restore from Import or Cloud
   const handleRestoreStore = async (restored: YearlyStore) => {
     if (!isUnlocked) {
-      triggerToast('🔒 Database terkunci. Buka kunci dengan akun pengembang untuk menerapkan cadangan.');
+      triggerToast('🔒 Database terkunci. Buka kunci dengan user admin untuk menerapkan cadangan.');
       setIsPasswordModalOpen(true);
       return;
     }
@@ -528,15 +488,12 @@ export default function App() {
         <Header
           onOpenPdfModal={() => setIsPdfModalOpen(true)}
           onPrintDirect={handlePrintDirect}
-          onOpenDatabaseModal={() => setIsDatabaseModalOpen(true)}
+          onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
           isUnlocked={isUnlocked}
           onToggleLock={handleToggleLock}
           onManualSave={handleManualSave}
           lastSavedTime={lastSavedTime}
           hasUnsavedChanges={hasUnsavedChanges}
-          onOpenDriveModal={() => setIsDriveModalOpen(true)}
-          isDriveConnected={!!currentUser}
-          userEmail={currentUser?.email}
           isCentralConnected={isCentralConnected}
           isSavingCentral={isSavingCentral}
           activeAccount={activeAccount}
@@ -557,7 +514,7 @@ export default function App() {
                 Rekapitulasi Penggunaan BBM Sekretariat
               </h1>
               <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-                Dashboard resmi analisis konsumsi bahan bakar operasional Sekretariat (Pertamax, Dex Kadin, Dex Toilet) dengan database Cloud Firestore yang dikunci oleh sistem akun pengembang.
+                Dashboard resmi analisis konsumsi bahan bakar operasional Sekretariat (Pertamax, Dex Kadin, Dex Toilet) dengan database Cloud Firestore terpusat yang aman.
               </p>
             </div>
 
@@ -574,13 +531,13 @@ export default function App() {
                 title={
                   isUnlocked
                     ? `Terotentikasi sebagai ${activeAccount?.username}. Klik untuk mengunci kembali.`
-                    : 'Database terkunci dengan sistem akun pengembang. Klik untuk membuka kunci.'
+                    : 'Database terkunci dengan user admin. Klik untuk membuka kunci.'
                 }
               >
                 {isUnlocked ? (
                   <>
                     <Unlock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Terbuka: {activeAccount?.username || 'Akun Pengembang'}</span>
+                    <span>Terbuka: {activeAccount?.username || 'admin'}</span>
                   </>
                 ) : (
                   <>
@@ -616,7 +573,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Central Cloud Database Banner - Multi-User Live Access & Account Lock Indicator */}
+          {/* Central Cloud Database Banner - Multi-User Live Access & Account Lock Indicator (Hidden Muat Ulang) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-emerald-50/90 via-blue-50/70 to-slate-50 p-4 rounded-xl border border-emerald-200 text-xs shadow-2xs">
             <div className="flex items-start sm:items-center gap-3 text-slate-800">
               <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -649,22 +606,12 @@ export default function App() {
                 <p className="text-slate-600 text-[11px] mt-0.5 leading-relaxed">
                   {isUnlocked
                     ? `Akses edit dan simpan ke Cloud Firestore aktif untuk akun ${activeAccount?.username}. Setiap perubahan yang Anda simpan akan langsung terlihat oleh seluruh pengguna aplikasi.`
-                    : 'Database ini terbuka untuk dilihat oleh siapa saja tanpa login Google Drive. Untuk mengubah tabel, pagu anggaran, atau menyimpan data ke Cloud Firestore, silakan buka kunci menggunakan akun yang telah ditetapkan pengembang.'}
+                    : 'Database ini terbuka untuk dilihat dalam mode baca publik. Untuk mengubah tabel, pagu anggaran, atau menyimpan data ke Cloud Firestore, silakan buka kunci menggunakan user admin.'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              <button
-                onClick={handleManualRefreshCentral}
-                disabled={isLoadingCentralDb}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors shadow-2xs disabled:opacity-60 cursor-pointer"
-                title="Muat ulang data terbaru dari database pusat"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${isLoadingCentralDb ? 'animate-spin' : ''}`} />
-                <span>Muat Ulang</span>
-              </button>
-
               {isUnlocked ? (
                 <>
                   <button
@@ -701,8 +648,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick Storage & Optional Drive Backup Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 text-xs shadow-2xs">
+          {/* Akses Database Strip - Simplified to ONE button: Pengaturan */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 text-xs shadow-2xs">
             <div className="flex items-center gap-2 text-slate-700">
               <span className="font-bold text-slate-900 flex items-center gap-1.5">
                 <Globe2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -710,49 +657,18 @@ export default function App() {
               </span>
               <span className="text-slate-500 text-[11px]">
                 {isUnlocked
-                  ? `Sesi aktif: User ${activeAccount?.username} (${activeAccount?.name}). Siap memperbarui Cloud Firestore.`
-                  : 'Mode Baca Aktif. Masuk dengan akun pengembang untuk mengedit & menyimpan.'}
+                  ? `Sesi aktif: User ${activeAccount?.username} (${activeAccount?.name}). Siap mengelola dan memperbarui data.`
+                  : 'Mode Baca Aktif. Masuk dengan user admin untuk mengedit & menyimpan.'}
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={handleManualSave}
-                disabled={isSavingCentral}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${
-                  isUnlocked
-                    ? 'text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
-                    : 'text-slate-600 bg-slate-100 hover:bg-slate-200 border-slate-300'
-                }`}
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Buka Pengaturan Database & Cadangan"
               >
-                {isUnlocked ? (
-                  <Save className="w-3 h-3 text-emerald-600" />
-                ) : (
-                  <Lock className="w-3 h-3 text-slate-500" />
-                )}
-                {isUnlocked ? 'Simpan Sekarang' : 'Simpan (Terkunci)'}
-              </button>
-              <button
-                onClick={handleReloadSavedData}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-md transition-colors cursor-pointer"
-                title="Buka atau muat ulang data tersimpan terakhir di memori lokal"
-              >
-                <RotateCcw className="w-3 h-3 text-slate-500" />
-                Muat Lokal
-              </button>
-              <button
-                onClick={() => setIsDriveModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-md transition-colors cursor-pointer"
-                title="Kelola cadangan offsite Google Drive"
-              >
-                <Cloud className="w-3 h-3 text-blue-600" />
-                Cadangan Drive
-              </button>
-              <button
-                onClick={() => setIsDatabaseModalOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-md transition-colors cursor-pointer"
-              >
-                <Database className="w-3 h-3 text-indigo-600" />
-                Impor / Ekspor DB
+                <Settings className="w-3.5 h-3.5 text-slate-600" />
+                <span>Pengaturan</span>
               </button>
             </div>
           </div>
@@ -797,7 +713,7 @@ export default function App() {
             onRequestUnlock={() => setIsPasswordModalOpen(true)}
           />
 
-          {/* Quarterly Progression & Qualitative Notes */}
+          {/* Quarterly Progression & Qualitative Notes (All 4 Quarters) */}
           <QuarterlyAnalysis data={data} year={selectedYear} />
         </main>
 
@@ -805,22 +721,15 @@ export default function App() {
         <footer className="mt-12 border-t border-slate-200 bg-white py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
             <div>
-              <span>SiBensin • {selectedYear} • Dinas Perumahan dan Kawasan Permukiman - @joko92m</span>
+              <span>SiBensin • {selectedYear} • Dinas Perumahan dan Kawasan Permukiman</span>
             </div>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setIsDriveModalOpen(true)}
+                onClick={() => setIsSettingsModalOpen(true)}
                 className="hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <Cloud className="w-3.5 h-3.5" />
-                Cadangan Google Drive
-              </button>
-              <button
-                onClick={() => setIsDatabaseModalOpen(true)}
-                className="hover:text-indigo-600 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Database className="w-3.5 h-3.5" />
-                Cadangan Database
+                <Settings className="w-3.5 h-3.5" />
+                <span>Pengaturan</span>
               </button>
               <button
                 onClick={() => setIsPdfModalOpen(true)}
@@ -869,27 +778,23 @@ export default function App() {
         onLockDatabase={handleToggleLock}
       />
 
-      {/* Modal Dialog for Database Import / Export / Reset */}
-      <DatabaseModal
-        isOpen={isDatabaseModalOpen}
-        onClose={() => setIsDatabaseModalOpen(false)}
+      {/* Unified Settings Modal (Pengaturan: Ekspor/Impor, Drive Backup, Keamanan Akun, Reset) */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
         yearlyStore={yearlyStore}
         onRestoreStore={handleRestoreStore}
         isUnlocked={isUnlocked}
         onRequestUnlock={() => setIsPasswordModalOpen(true)}
-      />
-
-      {/* Modal Dialog for Google Drive Synchronization (Optional Personal Backup) */}
-      <GoogleDriveSyncModal
-        isOpen={isDriveModalOpen}
-        onClose={() => setIsDriveModalOpen(false)}
-        yearlyStore={yearlyStore}
-        onApplyDatabase={handleRestoreStore}
+        onManualSave={handleManualSave}
+        isSavingCentral={isSavingCentral}
+        lastSavedTime={lastSavedTime}
+        activeAccount={activeAccount}
+        onLockDatabase={handleToggleLock}
         currentUser={currentUser}
         onUserChange={setCurrentUser}
         autoSyncEnabled={autoSyncEnabled}
         onToggleAutoSync={handleToggleAutoSync}
-        lastLocalSavedTime={lastSavedTime}
       />
     </div>
   );

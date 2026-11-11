@@ -12,12 +12,10 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import {
-  SINGLE_MASTER_ACCOUNT,
   authenticateAccount,
   updateMasterPassword,
   ActiveSession,
 } from '../services/accountAuth';
-import { googleSignIn } from '../services/googleDriveAuth';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -35,12 +33,11 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
   onLockDatabase,
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'change'>('login');
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Change password states
   const [oldPass, setOldPass] = useState('');
@@ -66,37 +63,12 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
 
     const session = authenticateAccount(username, password);
     if (session) {
-      setUsername('');
       setPassword('');
       setErrorMsg('');
       onSuccess(session);
       onClose();
     } else {
       setErrorMsg('User atau Password salah. Silakan coba lagi.');
-    }
-  };
-
-  const handleGoogleDevLogin = async () => {
-    setIsGoogleLoading(true);
-    setErrorMsg('');
-    try {
-      const res = await googleSignIn();
-      if (res && res.user.email) {
-        const session: ActiveSession = {
-          username: SINGLE_MASTER_ACCOUNT.username,
-          name: SINGLE_MASTER_ACCOUNT.name,
-          role: SINGLE_MASTER_ACCOUNT.role,
-          loggedInAt: new Date().toISOString(),
-        };
-        onSuccess(session);
-        onClose();
-      }
-    } catch (err: any) {
-      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
-        setErrorMsg('Gagal masuk dengan akun Google: ' + (err.message || 'Error'));
-      }
-    } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -162,7 +134,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             }}
             className={`py-3 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'login'
-                ? 'border-b-2 border-blue-600 text-blue-700 bg-white shadow-2xs'
+                ? 'border-b-2 border-blue-600 text-blue-700 bg-white shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -178,7 +150,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             }}
             className={`py-3 transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'change'
-                ? 'border-b-2 border-blue-600 text-blue-700 bg-white shadow-2xs'
+                ? 'border-b-2 border-blue-600 text-blue-700 bg-white shadow-2xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -203,22 +175,22 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
             </div>
           )}
 
-          {/* TAB 1: LOGIN AKUN TUNGGAL */}
+          {/* TAB 1: LOGIN */}
           {activeTab === 'login' && (
             <div className="space-y-4">
               {activeAccount ? (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                         ✓
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-emerald-900">
+                        <div className="text-xs font-bold text-emerald-950">
                           {activeAccount.name}
                         </div>
                         <div className="text-[11px] text-emerald-700 font-mono">
-                          User: {activeAccount.username}
+                          User: <strong>{activeAccount.username}</strong>
                         </div>
                       </div>
                     </div>
@@ -264,8 +236,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Masukkan user..."
-                        className="w-full pl-9 pr-3 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="admin"
+                        className="w-full pl-9 pr-3 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50"
                         required
                         autoFocus
                       />
@@ -285,7 +257,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Masukkan password..."
-                        className="w-full pl-9 pr-10 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full pl-9 pr-10 py-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50/50"
                         required
                       />
                       <button
@@ -298,39 +270,21 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center justify-end gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={handleGoogleDevLogin}
-                      disabled={isGoogleLoading}
-                      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
-                      title="Masuk cepat dengan akun Google pengembang (dpkpkabpas@gmail.com)"
+                      onClick={onClose}
+                      className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 48 48">
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                      </svg>
-                      <span>Masuk Google</span>
+                      Batal
                     </button>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                      >
-                        Batal
-                      </button>
-                      <button
-                        type="submit"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
-                      >
-                        <Unlock className="w-3.5 h-3.5" />
-                        <span>Buka Kunci</span>
-                      </button>
-                    </div>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Unlock className="w-3.5 h-3.5" />
+                      <span>Buka Kunci</span>
+                    </button>
                   </div>
                 </form>
               )}
@@ -341,7 +295,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({
           {activeTab === 'change' && (
             <form onSubmit={handleChangePasswordSubmit} className="space-y-3.5">
               <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900">
-                Perbarui kata sandi akun pengembang. Pastikan mengingat kata sandi baru yang dibuat.
+                Perbarui kata sandi akun admin. Pastikan mengingat kata sandi baru yang dibuat.
               </div>
 
               <div>

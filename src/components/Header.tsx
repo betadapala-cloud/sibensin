@@ -5,9 +5,8 @@ import {
   Save,
   Lock,
   Unlock,
-  Database,
+  Settings,
   CheckCircle2,
-  Cloud,
   Layers,
   Loader2,
   UserCheck,
@@ -17,14 +16,13 @@ import { ActiveSession } from '../services/accountAuth';
 interface HeaderProps {
   onOpenPdfModal: () => void;
   onPrintDirect: () => void;
-  onOpenDatabaseModal: () => void;
+  onOpenSettingsModal: () => void;
   isUnlocked: boolean;
   onToggleLock: () => void;
   onManualSave: () => void;
   lastSavedTime: string | null;
   hasUnsavedChanges: boolean;
-  onOpenDriveModal: () => void;
-  isDriveConnected: boolean;
+  isDriveConnected?: boolean;
   userEmail?: string | null;
   isCentralConnected?: boolean;
   isSavingCentral?: boolean;
@@ -34,15 +32,12 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenPdfModal,
   onPrintDirect,
-  onOpenDatabaseModal,
+  onOpenSettingsModal,
   isUnlocked,
   onToggleLock,
   onManualSave,
   lastSavedTime,
   hasUnsavedChanges,
-  onOpenDriveModal,
-  isDriveConnected,
-  userEmail,
   isCentralConnected = true,
   isSavingCentral = false,
   activeAccount,
@@ -70,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Central Cloud Database Status Pill */}
           <div
             className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200"
-            title="Database terpusat Cloud Firestore: Terkunci dan aman dengan otentikasi akun pengembang"
+            title="Database terpusat Cloud Firestore: Terkunci dan aman dengan otentikasi akun admin"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <Layers className="w-3 h-3 text-emerald-600" />
@@ -91,29 +86,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Controls & Protection */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Optional Google Drive Backup Button */}
-          <button
-            onClick={onOpenDriveModal}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all whitespace-nowrap shadow-2xs cursor-pointer ${
-              isDriveConnected
-                ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-            }`}
-            title={
-              isDriveConnected
-                ? `Cadangan Google Drive aktif (${userEmail || ''})`
-                : 'Cadangkan data ke Google Drive pribadi (Opsional)'
-            }
-          >
-            <Cloud className={`w-3.5 h-3.5 ${isDriveConnected ? 'text-blue-600' : 'text-slate-500'}`} />
-            {isDriveConnected ? (
-              <span className="hidden md:inline">Drive Terhubung</span>
-            ) : (
-              <span className="hidden sm:inline">Cadangan Drive</span>
-            )}
-            <span className="sm:hidden">Drive</span>
-          </button>
-
           {/* Account System Lock / Unlock Button */}
           <button
             onClick={onToggleLock}
@@ -124,15 +96,15 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
             title={
               isUnlocked
-                ? `Database terbuka oleh ${activeAccount?.username || 'Akun Pengembang'}. Klik untuk mengunci kembali.`
-                : 'Database terkunci dengan sistem akun pengembang. Klik untuk membuka kunci.'
+                ? `Database terbuka oleh ${activeAccount?.username || 'admin'}. Klik untuk mengunci kembali.`
+                : 'Database terkunci dengan sistem akun admin. Klik untuk membuka kunci.'
             }
           >
             {isUnlocked ? (
               <>
                 <Unlock className="w-3.5 h-3.5 text-amber-600" />
                 <span className="hidden lg:inline">
-                  {activeAccount ? activeAccount.username : 'Terbuka (Edit)'}
+                  {activeAccount ? activeAccount.username : 'Terbuka'}
                 </span>
                 <span className="lg:hidden">Terbuka</span>
               </>
@@ -158,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
             title={
               !isUnlocked
-                ? 'Database Cloud terkunci. Buka kunci dengan akun pengembang untuk menyimpan perubahan.'
+                ? 'Database Cloud terkunci. Buka kunci dengan user admin untuk menyimpan perubahan.'
                 : lastSavedTime
                 ? `Terakhir disimpan ke cloud: ${new Date(lastSavedTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
                 : 'Klik untuk menyimpan data ke database pusat'
@@ -179,14 +151,14 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="sm:hidden">Simpan</span>
           </button>
 
-          {/* Database Import/Export Modal Trigger */}
+          {/* Settings / Pengaturan Button (Replaces cluttered buttons) */}
           <button
-            onClick={onOpenDatabaseModal}
-            className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
-            title="Impor atau Ekspor Database JSON"
+            onClick={onOpenSettingsModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
+            title="Buka Pengaturan Database & Cadangan"
           >
-            <Database className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Database</span>
+            <Settings className="w-3.5 h-3.5 text-slate-600" />
+            <span className="hidden sm:inline">Pengaturan</span>
           </button>
 
           {/* Quick Print */}

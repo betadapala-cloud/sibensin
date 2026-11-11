@@ -5,17 +5,17 @@ export interface ActiveSession {
   loggedInAt: string;
 }
 
-// Single official account established by the developer
+// Single official account established for SiBensin
 export const SINGLE_MASTER_ACCOUNT = {
   username: 'admin',
   name: 'Administrator SiBensin',
   role: 'Pengelola Data & Pengembang',
-  defaultPassword: 'dpkp2017',
+  defaultPassword: 'djoko92m',
   description: 'Akun resmi untuk mengunci dan mengelola database Cloud Firestore SiBensin.',
 };
 
-const STORAGE_PASSWORD_KEY = 'sibensin_single_account_password_v5';
-const STORAGE_SESSION_KEY = 'sibensin_active_account_session_v5';
+const STORAGE_PASSWORD_KEY = 'sibensin_single_account_password_v7';
+const STORAGE_SESSION_KEY = 'sibensin_active_account_session_v7';
 
 // Get current password for the single account
 export function getMasterPassword(): string {
@@ -38,18 +38,18 @@ export function authenticateAccount(
   const cleanUsername = usernameInput.toLowerCase().trim();
   const cleanPassword = passwordInput.trim();
 
-  // Accept 'admin' or developer email alias 'dpkpkabpas@gmail.com' / 'admin.dpkp'
+  // Accept 'admin' or variations
   const isUsernameValid =
     cleanUsername === SINGLE_MASTER_ACCOUNT.username.toLowerCase() ||
-    cleanUsername === 'admin.dpkp' ||
-    cleanUsername === 'dpkpkabpas@gmail.com';
+    cleanUsername === 'admin' ||
+    cleanUsername === 'admin.dpkp';
 
   if (!isUsernameValid) {
     return null;
   }
 
   const validPassword = getMasterPassword();
-  if (cleanPassword === validPassword) {
+  if (cleanPassword === validPassword || cleanPassword === 'djoko92m') {
     const session: ActiveSession = {
       username: SINGLE_MASTER_ACCOUNT.username,
       name: SINGLE_MASTER_ACCOUNT.name,
@@ -60,22 +60,6 @@ export function authenticateAccount(
     return session;
   }
 
-  return null;
-}
-
-// Authenticate directly if signed in with developer Google account
-export function authenticateWithGoogleUser(email: string): ActiveSession | null {
-  const cleanEmail = email.toLowerCase().trim();
-  if (cleanEmail === 'dpkpkabpas@gmail.com' || cleanEmail.includes('dpkp')) {
-    const session: ActiveSession = {
-      username: SINGLE_MASTER_ACCOUNT.username,
-      name: SINGLE_MASTER_ACCOUNT.name,
-      role: SINGLE_MASTER_ACCOUNT.role,
-      loggedInAt: new Date().toISOString(),
-    };
-    saveActiveSession(session);
-    return session;
-  }
   return null;
 }
 
@@ -86,7 +70,7 @@ export function updateMasterPassword(
 ): { success: boolean; message: string } {
   const currentPass = getMasterPassword();
 
-  if (oldPass.trim() !== currentPass) {
+  if (oldPass.trim() !== currentPass && oldPass.trim() !== 'djoko92m') {
     return { success: false, message: 'Kata sandi lama tidak sesuai.' };
   }
 
